@@ -16,6 +16,7 @@ namespace NoobsGameOfLife
         public Simulation Simulation { get; set; }
 
         private readonly Timer timer;
+        private int max;
 
         public RenderControl()
         {
@@ -38,17 +39,25 @@ namespace NoobsGameOfLife
 
             using (var brush = new SolidBrush(Color.DarkGreen))
             {
-                foreach (var nutrienInfo in Simulation.GetNutrientInfos())
+                foreach (var nutrienInfo in Simulation.NutrientInfos)
                 {
                     e.Graphics.FillRectangle(brush, new Rectangle(nutrienInfo.Position.X, nutrienInfo.Position.Y, 5, 5));
                 }
             }
+            
 
-            var max = (int)(Simulation.GetCellInfos().Max(x => x.Energy) * 1.2);
-
-            foreach (var cellInfo in Simulation.GetCellInfos())
+            foreach (var cellInfo in Simulation.CellInfos)
             {
+                if (max < cellInfo.Energy)
+                    max = cellInfo.Energy;
+
                 var redValue = cellInfo.Energy * 255 / max;
+
+                if (redValue < 0)
+                    redValue = 0;
+                else if (redValue > 255)
+                    redValue = 255;
+
                 using (var brush = new SolidBrush(Color.FromArgb(redValue, 0, 0)))
                 {
                     e.Graphics.FillRectangle(brush, new Rectangle(cellInfo.Position.X, cellInfo.Position.Y, 10, 10));

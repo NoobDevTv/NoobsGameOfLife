@@ -4,7 +4,7 @@ using System.Text;
 
 namespace NoobsGameOfLife.Core
 {
-    public class Nutrient 
+    public class Nutrient : IVisible
     {
 
         public Location Position { get; set; }
