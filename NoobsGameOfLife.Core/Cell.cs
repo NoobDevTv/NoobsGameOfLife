@@ -21,6 +21,8 @@ namespace NoobsGameOfLife.Core
             }
         }
 
+        private Nutrient digesting;
+        private DNA dna;
         private readonly Random random;
         private readonly int seed;
         private int energy;
@@ -43,6 +45,11 @@ namespace NoobsGameOfLife.Core
         {
             if (timeToNextSexyTimeWithOtherCellUlala > 0)
                 timeToNextSexyTimeWithOtherCellUlala -= 1;
+
+            if (Digest()) { 
+                digesting.PoopOut(Position);
+                digesting = null;
+            }
 
             int x = 0;
             int y = 0;
@@ -118,11 +125,13 @@ namespace NoobsGameOfLife.Core
 
         internal void TryCollect(Nutrient nutrient)
         {
+            if (energy >= dna.Saturated && digesting != null)
+                return;
+
             if (!Collide(nutrient.Position))
                 return;
 
-            energy += nutrient.Collect();
-            //10
+            digesting = nutrient;
         }
 
         private bool Collide(Location otherLocation)
@@ -143,6 +152,36 @@ namespace NoobsGameOfLife.Core
         private int GetFertility()
         {
             return random.Next(0, 500);
+        }
+
+        private bool Digest()
+        {
+            if (digesting != null && energy < dna.MaxEnergy)
+            {
+                foreach (var digestibilityElement in dna.FoodDigestibility)
+                {
+                    if (digesting.Elements.TryGetValue(digestibilityElement.Key, out var amount))
+                    {
+                        byte count;
+                        for (count = 0; count < amount; count++)
+                        {
+                            energy += digestibilityElement.Key.Energy;
+
+                            if (energy >= dna.MaxEnergy)
+                                break;
+                        }
+
+                        digesting.Elements[digestibilityElement.Key] -= count;
+                    }
+
+                    if (energy >= dna.MaxEnergy)
+                        return true;
+                }
+
+                if (digesting.Elements.Where(x => dna.FoodDigestibility.ContainsKey(x.Key)).All(x=>x.Value <= 0))
+                    return true;
+            }
+            return false;
         }
 
         public enum Gender

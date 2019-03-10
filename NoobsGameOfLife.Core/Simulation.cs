@@ -37,7 +37,7 @@ namespace NoobsGameOfLife.Core
                 cells.Add(new Cell(random.Next()));
 
             for (int i = 0; i < 2000; i++)
-                nutrients.Add(new Nutrient(random));
+                nutrients.Add(new Nutrient());
         }
 
         public void Start()
@@ -71,7 +71,7 @@ namespace NoobsGameOfLife.Core
 
                 foreach (var cell in cells.Where(c => !c.IsAlive).ToArray())
                 {
-                    nutrients.Add(new Nutrient(cell.Position, random));
+                    nutrients.Add(new Nutrient(cell.Position));
                     cells.Remove(cell);
                 }
 

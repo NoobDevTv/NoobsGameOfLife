@@ -1,42 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace NoobsGameOfLife.Core
 {
     public class Nutrient : IVisible
     {
-
         public Location Position { get; set; }
 
-        public int Energy { get; private set; }
         public bool IsCollected { get; private set; }
-        
-        public Nutrient(Random rand)
-        {
-            ReInitalized(rand);
-        }
-        public Nutrient(Location location, Random rand)
-        {
-            ReInitalized(location, rand);
-        }
 
-        public void ReInitalized(Random rand)
-        {
-            ReInitalized(new Location(rand.Next(0, 500), rand.Next(0, 500)), rand);
-        }
-        public void ReInitalized(Location location, Random rand)
+        public Dictionary<Element, byte> Elements { get; set; }
+
+        public Nutrient(Location location, Dictionary<Element, byte> elements)
         {
             Position = location;
-            Energy = rand.Next(500, 1000);
-
             IsCollected = false;
+            Elements = elements;
         }
 
-        internal int Collect()
+        public void PoopOut(Location position)
         {
-            IsCollected = true;
-            return Energy;
+            if (Elements.All(x => x.Value == 0))
+                return;
+
+            Position = position;
+            IsCollected = false;
         }
     }
 }
