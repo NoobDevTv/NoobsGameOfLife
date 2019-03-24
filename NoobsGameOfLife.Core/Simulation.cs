@@ -17,27 +17,22 @@ namespace NoobsGameOfLife.Core
 
         private readonly List<Cell> cells;
         private readonly List<Nutrient> nutrients;
-
+        private readonly NutrientFactory nutrientFactory;
+        private readonly CellFactory cellFactory;
         private CancellationTokenSource cancellationTokenSource;
-        private readonly Random random;
 
         public Simulation(int width, int height)
         {
-
             Width = width;
             Height = height;
-
-            random = new Random();
-
-
+                        
             cells = new List<Cell>();
             nutrients = new List<Nutrient>();
+            nutrientFactory = new NutrientFactory(width, height);
+            cellFactory = new CellFactory(width, height);
 
-            for (int i = 0; i < 30; i++)
-                cells.Add(new Cell(random.Next()));
-
-            for (int i = 0; i < 2000; i++)
-                nutrients.Add(new Nutrient());
+            cells.AddRange(cellFactory.GenerateCells(30));
+            nutrients.AddRange(nutrientFactory.GenerateNutrients(2000));
         }
 
         public void Start()
@@ -71,7 +66,7 @@ namespace NoobsGameOfLife.Core
 
                 foreach (var cell in cells.Where(c => !c.IsAlive).ToArray())
                 {
-                    nutrients.Add(new Nutrient(cell.Position));
+                    //nutrients.Add(new Nutrient(cell.Position));
                     cells.Remove(cell);
                 }
 
@@ -82,17 +77,14 @@ namespace NoobsGameOfLife.Core
             }
         }
 
-        private IList<IVisible> CellSees(Cell cell)
-        {
-
-            return nutrients
+        private IEnumerable<IVisible> CellSees(Cell cell)
+            => nutrients
                 .Where(n => !n.IsCollected)
                 .Select(n => (IVisible)n)
                 .Concat(cells)
                 .Where(c => Collided(cell, c, 50) && c != cell)
-                .OrderBy(v => Math.Abs((int)(cell.Position - v.Position)))
-                .ToList();
-        }
+                .OrderBy(v => Math.Abs((int)(cell.Position - v.Position)));
+       
 
         public void Stop()
         {

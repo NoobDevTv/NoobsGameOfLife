@@ -13,17 +13,28 @@ namespace NoobsGameOfLife.Core
 
         public Dictionary<Element, byte> Elements { get; set; }
 
-        public Nutrient(Location location, Dictionary<Element, byte> elements)
+        public Nutrient(Location location, params (Element Element, byte Count)[] elements)
         {
             Position = location;
             IsCollected = false;
-            Elements = elements;
+            Elements = new Dictionary<Element, byte>();
+
+            foreach (var element in elements)  
+            {
+                if (Elements.ContainsKey(element.Element))
+                    Elements[element.Element] = element.Count;
+                else
+                    Elements.Add(element.Element, element.Count);
+            }
         }
 
         public void PoopOut(Location position)
         {
             if (Elements.All(x => x.Value == 0))
+            {
+                IsCollected = true;
                 return;
+            }
 
             Position = position;
             IsCollected = false;

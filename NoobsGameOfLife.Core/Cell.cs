@@ -10,7 +10,7 @@ namespace NoobsGameOfLife.Core
         public Location Position { get; set; }
         public bool IsAlive { get; private set; }
 
-        public Gender Sex { get; set; }
+        public DNA.Gender Sex => dna.Sex;
 
         public int Energy
         {
@@ -21,24 +21,22 @@ namespace NoobsGameOfLife.Core
             }
         }
 
-        private Nutrient digesting;
-        private DNA dna;
-        private readonly Random random;
-        private readonly int seed;
         private int energy;
+        private Nutrient digesting;
+        private readonly DNA dna;
+        private readonly Random random;
 
         private IVisible currentTarget;
 
         private int timeToNextSexyTimeWithOtherCellUlala = 1000;
 
-        public Cell(int seed)
+        public Cell(DNA dna)
         {
-            random = new Random(seed);
-            this.seed = seed;
+            random = new Random(dna.Seed);
             Position = new Location(100, 100);
+            this.dna = dna; //new DNA { FoodDigestibility = new Dictionary<Element, int> { [Element.Carbon] = 0, [Element.Oxygen] = 0, [Element.Hydrogen] = 0 }, Saturated = 800, MaxEnergy = 1000 };
             energy = 1000;
             IsAlive = true;
-            Sex = (Gender)random.Next(1, 3);
         }
 
         public void Update(Simulation simulation)
@@ -46,7 +44,8 @@ namespace NoobsGameOfLife.Core
             if (timeToNextSexyTimeWithOtherCellUlala > 0)
                 timeToNextSexyTimeWithOtherCellUlala -= 1;
 
-            if (Digest()) { 
+            if (Digest())
+            {
                 digesting.PoopOut(Position);
                 digesting = null;
             }
@@ -56,7 +55,12 @@ namespace NoobsGameOfLife.Core
 
             if (currentTarget is Nutrient nutrient)
             {
-                if (nutrient.IsCollected)
+                if (nutrient.IsCollected || dna.Saturated < Energy)
+                    currentTarget = null;
+            }
+            else if (currentTarget is Cell cell)
+            {
+                if (!cell.IsAlive)
                     currentTarget = null;
             }
 
@@ -106,7 +110,7 @@ namespace NoobsGameOfLife.Core
 
             if (otherCell.GetFertility() == GetFertility())
             {
-                child = new Cell(seed + otherCell.seed) { };
+                child = this + otherCell;
                 timeToNextSexyTimeWithOtherCellUlala = 1000;
                 otherCell.timeToNextSexyTimeWithOtherCellUlala = 1000;
                 currentTarget = null;
@@ -118,7 +122,6 @@ namespace NoobsGameOfLife.Core
                 otherCell.timeToNextSexyTimeWithOtherCellUlala = 300;
                 return false;
             }
-
 
             return true;
         }
@@ -138,12 +141,16 @@ namespace NoobsGameOfLife.Core
             => Position.X <= otherLocation.X && (Position.X + 10) >= otherLocation.X &&
                Position.Y <= otherLocation.Y && (Position.Y + 10) >= otherLocation.Y;
 
-        internal void Sees(IList<IVisible> visibles)
+        internal void Sees(IEnumerable<IVisible> visibles)
         {
-            if (currentTarget != null || visibles.Count == 0)
+            if (currentTarget != null || visibles.Count() == 0)
                 return;
 
-            currentTarget = visibles.Where(x => x is Nutrient).OrderByDescending(x => ((Nutrient)x).Energy / (float)(int)(x.Position - Position)).FirstOrDefault();//. FirstOrDefault(v => v is Nutrient);
+            currentTarget = visibles
+                .OfType<Nutrient>()
+                .Where(n => dna.FoodDigestibility.Any(k => k.Value >= 0 && n.Elements.ContainsKey(k.Key)))
+                .OrderByDescending(x => (float)(int)(x.Position - Position))
+                .FirstOrDefault();
 
             if (currentTarget == null && timeToNextSexyTimeWithOtherCellUlala == 0)
                 currentTarget = visibles.Where(x => ((Cell)x).Sex != Sex).OrderByDescending(x => ((Cell)x).Energy / (float)(int)(x.Position - Position)).FirstOrDefault(); ;
@@ -178,17 +185,14 @@ namespace NoobsGameOfLife.Core
                         return true;
                 }
 
-                if (digesting.Elements.Where(x => dna.FoodDigestibility.ContainsKey(x.Key)).All(x=>x.Value <= 0))
+                if (digesting.Elements.Where(x => dna.FoodDigestibility.ContainsKey(x.Key)).All(x => x.Value <= 0))
                     return true;
             }
             return false;
         }
 
-        public enum Gender
-        {
-            Unknown,
-            Male,
-            Female
-        }
+
+        public static Cell operator +(Cell male, Cell female) 
+            => new Cell(male.dna + female.dna);
     }
 }
