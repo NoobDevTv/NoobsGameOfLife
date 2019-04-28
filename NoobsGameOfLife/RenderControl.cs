@@ -31,6 +31,8 @@ namespace NoobsGameOfLife
         {
             e.Graphics.Clear(Color.CornflowerBlue);
 
+            if (Simulation == null)
+                return;
 
             using (var pen = new Pen(Color.Red))
             {

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace NoobsGameOfLife.Core
 {
@@ -26,15 +25,18 @@ namespace NoobsGameOfLife.Core
         private readonly DNA dna;
         private readonly Random random;
 
+        private readonly DNA gamete;
+
         private IVisible currentTarget;
 
-        private int timeToNextSexyTimeWithOtherCellUlala = 1000;
+        private int timeToNextSexyTimeWithOtherCellUlala = 40;
 
         public Cell(DNA dna)
         {
             random = new Random(dna.Seed);
             Position = new Location(100, 100);
-            this.dna = dna; //new DNA { FoodDigestibility = new Dictionary<Element, int> { [Element.Carbon] = 0, [Element.Oxygen] = 0, [Element.Hydrogen] = 0 }, Saturated = 800, MaxEnergy = 1000 };
+            this.dna = dna;
+            gamete = dna.Copy();
             energy = 1000;
             IsAlive = true;
         }
@@ -50,8 +52,8 @@ namespace NoobsGameOfLife.Core
                 digesting = null;
             }
 
-            int x = 0;
-            int y = 0;
+            var x = 0;
+            var y = 0;
 
             if (currentTarget is Nutrient nutrient)
             {
@@ -73,7 +75,7 @@ namespace NoobsGameOfLife.Core
             {
                 var count = random.Next(0, 6);
 
-                var way = currentTarget.Position - Position;
+                Location way = currentTarget.Position - Position;
                 x += way.X > 0 ? Math.Min(count, way.X) : Math.Max(-count, way.X);
                 y += way.Y > 0 ? Math.Min(count, way.Y) : Math.Max(-count, way.Y);
             }
@@ -111,8 +113,8 @@ namespace NoobsGameOfLife.Core
             if (otherCell.GetFertility() == GetFertility())
             {
                 child = this + otherCell;
-                timeToNextSexyTimeWithOtherCellUlala = 1000;
-                otherCell.timeToNextSexyTimeWithOtherCellUlala = 1000;
+                timeToNextSexyTimeWithOtherCellUlala = 600;
+                otherCell.timeToNextSexyTimeWithOtherCellUlala = 600;
                 currentTarget = null;
                 otherCell.currentTarget = null;
             }
@@ -157,28 +159,29 @@ namespace NoobsGameOfLife.Core
         }
 
         private int GetFertility()
-        {
-            return random.Next(0, 500);
-        }
+            => random.Next(0, 10);
 
         private bool Digest()
         {
             if (digesting != null && energy < dna.MaxEnergy)
             {
-                foreach (var digestibilityElement in dna.FoodDigestibility)
+                foreach (KeyValuePair<Element, int> digestibilityElement in dna.FoodDigestibility.Where(x => x.Value > 0).OrderBy(x => x.Value))
                 {
                     if (digesting.Elements.TryGetValue(digestibilityElement.Key, out var amount))
                     {
                         byte count;
                         for (count = 0; count < amount; count++)
                         {
-                            energy += digestibilityElement.Key.Energy;
+                            energy += digestibilityElement.Key.Energy;// * digestibilityElement.Value / 10;
 
                             if (energy >= dna.MaxEnergy)
                                 break;
                         }
 
                         digesting.Elements[digestibilityElement.Key] -= count;
+                        //Value 1 = 0.1%
+                        //Bei 100 => 10%
+                        //Bei -100 => -10%
                     }
 
                     if (energy >= dna.MaxEnergy)
@@ -192,7 +195,7 @@ namespace NoobsGameOfLife.Core
         }
 
 
-        public static Cell operator +(Cell male, Cell female) 
-            => new Cell(male.dna + female.dna);
+        public static Cell operator +(Cell male, Cell female)
+            => new Cell(male.gamete + female.gamete);
     }
 }

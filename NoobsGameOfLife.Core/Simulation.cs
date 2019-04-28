@@ -1,25 +1,33 @@
-﻿using System;
+﻿using NoobsGameOfLife.Core.Factories;
+using NoobsGameOfLife.Core.Information;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace NoobsGameOfLife.Core
 {
-    public class Simulation
+    public class Simulation : INotifyPropertyChanged
     {
         public int Width { get; private set; }
         public int Height { get; private set; }
 
-        public CellInfo[] CellInfos { get; set; }
-        public NutrientInfo[] NutrientInfos { get; set; }
+        public CellInfo[] CellInfos { get => cellInfo; set => SetValue(value, ref cellInfo); }
+        public NutrientInfo[] NutrientInfos { get => nutrientInfos; set => SetValue(value, ref nutrientInfos); }
 
         private readonly List<Cell> cells;
         private readonly List<Nutrient> nutrients;
-        private readonly NutrientFactory nutrientFactory;
-        private readonly CellFactory cellFactory;
+        private readonly Dictionary<Type, Factory> factories;
         private CancellationTokenSource cancellationTokenSource;
+
+        private CellInfo[] cellInfo;
+        private NutrientInfo[] nutrientInfos;
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         public Simulation(int width, int height)
         {
@@ -28,11 +36,15 @@ namespace NoobsGameOfLife.Core
                         
             cells = new List<Cell>();
             nutrients = new List<Nutrient>();
-            nutrientFactory = new NutrientFactory(width, height);
-            cellFactory = new CellFactory(width, height);
 
-            cells.AddRange(cellFactory.GenerateCells(30));
-            nutrients.AddRange(nutrientFactory.GenerateNutrients(2000));
+            factories = new Dictionary<Type, Factory>()
+            {
+                [typeof(Cell)] = new CellFactory(width, height),
+                [typeof(Nutrient)] = new NutrientFactory(width, height)
+            };
+
+            cells.AddRange(factories[typeof(Cell)].Generate<Cell>(30));
+            nutrients.AddRange(factories[typeof(Nutrient)].Generate<Nutrient>(2000));
         }
 
         public void Start()
@@ -85,7 +97,6 @@ namespace NoobsGameOfLife.Core
                 .Where(c => Collided(cell, c, 50) && c != cell)
                 .OrderBy(v => Math.Abs((int)(cell.Position - v.Position)));
        
-
         public void Stop()
         {
             cancellationTokenSource.Cancel();
@@ -97,6 +108,19 @@ namespace NoobsGameOfLife.Core
                 && seeker.Position.X - seekerRange <= sighted.Position.X
                 && seeker.Position.Y + seekerRange >= sighted.Position.Y
                 && seeker.Position.Y - seekerRange <= sighted.Position.Y;
+        }
+
+        private void SetValue<T>(T value, ref T field, [CallerMemberName]string callername = "")
+        {
+            if(field != null)
+            {
+                if (field.Equals(value))
+                    return;
+            }
+
+            field = value;
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(callername));
         }
     }
 }

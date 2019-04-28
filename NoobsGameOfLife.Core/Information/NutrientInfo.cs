@@ -1,4 +1,4 @@
-﻿namespace NoobsGameOfLife.Core
+﻿namespace NoobsGameOfLife.Core.Information
 {
     public struct NutrientInfo
     {
