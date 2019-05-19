@@ -13,17 +13,17 @@ namespace NoobsGameOfLife.Core
             random = new Random();
         }
 
-        public Dictionary<Element, int> FoodDigestibility { get; set; }
+        public Dictionary<Element, float> FoodDigestibility { get; set; }
 
         public ushort DigestSpeed { get; set; }
-        public ushort MaxEnergy { get; set; }
+        public double MaxEnergy { get; set; }
         public ushort Saturated { get; set; }
         public int Seed { get; internal set; }
         public Gender Sex { get; set; }
 
         public DNA()
         {
-            FoodDigestibility = new Dictionary<Element, int>();
+            FoodDigestibility = new Dictionary<Element, float>();
         }
 
         public DNA Copy()
@@ -36,15 +36,31 @@ namespace NoobsGameOfLife.Core
                 Sex = Sex
             };
 
+        public override string ToString() => $"{Sex} | {MaxEnergy} | {Saturated}";
+
         public static DNA operator +(DNA male, DNA female)
-            => new DNA
+        {
+            var foodDigestibilities = new Dictionary<Element, float>();
+
+            foreach (var element in male.FoodDigestibility)
+                foodDigestibilities.Add(element.Key, (element.Value + female.FoodDigestibility[element.Key]) / 2);
+
+            var foodDigestibility = foodDigestibilities.OrderBy(x => x.Value);
+
+            var entry = foodDigestibility.First();
+            foodDigestibilities[entry.Key] -= 0.5f;
+            entry = foodDigestibility.Last();
+            foodDigestibilities[entry.Key] += 0.5f;
+
+            return new DNA
             {
                 Seed = male.Seed + female.Seed,
                 MaxEnergy = (ushort)((male.MaxEnergy + female.MaxEnergy) / 2),
                 Saturated = (ushort)((male.Saturated + female.Saturated) / 2),
-                FoodDigestibility = male.FoodDigestibility,
+                FoodDigestibility = foodDigestibilities,
                 Sex = (Gender)random.Next(0, 3)
             };
+        }
 
         public enum Gender
         {

@@ -8,11 +8,11 @@ namespace NoobsGameOfLife.Core.Factories
     {
         public DNA OriginDNA => new DNA
         {
-            FoodDigestibility = new Dictionary<Element, int>
+            FoodDigestibility = new Dictionary<Element, float> //Zuweisung
             {
-                [Element.Carbon] = 100,
-                [Element.Oxygen] = 100,
-                [Element.Hydrogen] = 100
+                [Element.Carbon] = 1, //1 == 100%
+                [Element.Oxygen] = 1, //1 == 100%
+                [Element.Hydrogen] = 1 //1 == 100%
             },
             Saturated = 800,
             MaxEnergy = 1000,

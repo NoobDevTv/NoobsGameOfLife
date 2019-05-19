@@ -11,7 +11,7 @@ namespace NoobsGameOfLife.Core
 
         public DNA.Gender Sex => dna.Sex;
 
-        public int Energy
+        public double Energy
         {
             get => energy; private set
             {
@@ -20,7 +20,7 @@ namespace NoobsGameOfLife.Core
             }
         }
 
-        private int energy;
+        private double energy;
         private Nutrient digesting;
         private readonly DNA dna;
         private readonly Random random;
@@ -31,10 +31,14 @@ namespace NoobsGameOfLife.Core
 
         private int timeToNextSexyTimeWithOtherCellUlala = 40;
 
-        public Cell(DNA dna)
+        public Cell(DNA dna) : this(dna, new Location(100, 100))
+        {
+        }
+
+        public Cell(DNA dna, Location position)
         {
             random = new Random(dna.Seed);
-            Position = new Location(100, 100);
+            Position = position;
             this.dna = dna;
             gamete = dna.Copy();
             energy = 1000;
@@ -94,6 +98,8 @@ namespace NoobsGameOfLife.Core
 
             Energy -= Math.Abs(x) + Math.Abs(y);
 
+            //TODO: used Energy to head element on current position
+
             Position += new Location(x, y);
         }
 
@@ -128,15 +134,19 @@ namespace NoobsGameOfLife.Core
             return true;
         }
 
-        internal void TryCollect(Nutrient nutrient)
+        internal bool TryCollect(Nutrient nutrient)
         {
+            if (nutrient.IsCollected)
+                return false;
+
             if (energy >= dna.Saturated && digesting != null)
-                return;
+                return false;
 
             if (!Collide(nutrient.Position))
-                return;
+                return false;
 
             digesting = nutrient;
+            return true;
         }
 
         private bool Collide(Location otherLocation)
@@ -165,23 +175,21 @@ namespace NoobsGameOfLife.Core
         {
             if (digesting != null && energy < dna.MaxEnergy)
             {
-                foreach (KeyValuePair<Element, int> digestibilityElement in dna.FoodDigestibility.Where(x => x.Value > 0).OrderBy(x => x.Value))
+                foreach (KeyValuePair<Element, float> digestibilityElement in dna.FoodDigestibility.OrderBy(x => x.Value))
                 {
                     if (digesting.Elements.TryGetValue(digestibilityElement.Key, out var amount))
                     {
                         byte count;
                         for (count = 0; count < amount; count++)
                         {
-                            energy += digestibilityElement.Key.Energy;// * digestibilityElement.Value / 10;
+                            energy += digestibilityElement.Key.Energy * digestibilityElement.Value;
+                            gamete.FoodDigestibility[digestibilityElement.Key] += 0.001f;
 
                             if (energy >= dna.MaxEnergy)
                                 break;
                         }
 
                         digesting.Elements[digestibilityElement.Key] -= count;
-                        //Value 1 = 0.1%
-                        //Bei 100 => 10%
-                        //Bei -100 => -10%
                     }
 
                     if (energy >= dna.MaxEnergy)
@@ -196,6 +204,6 @@ namespace NoobsGameOfLife.Core
 
 
         public static Cell operator +(Cell male, Cell female)
-            => new Cell(male.gamete + female.gamete);
+            => new Cell(male.gamete + female.gamete, female.Position);
     }
 }

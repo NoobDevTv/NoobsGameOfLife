@@ -15,6 +15,7 @@ namespace NoobsGameOfLife.Core
     {
         public int Width { get; private set; }
         public int Height { get; private set; }
+        public int SleepTime { get; set; }
 
         public CellInfo[] CellInfos { get => cellInfo; set => SetValue(value, ref cellInfo); }
         public NutrientInfo[] NutrientInfos { get => nutrientInfos; set => SetValue(value, ref nutrientInfos); }
@@ -33,7 +34,7 @@ namespace NoobsGameOfLife.Core
         {
             Width = width;
             Height = height;
-                        
+            SleepTime = 16;
             cells = new List<Cell>();
             nutrients = new List<Nutrient>();
 
@@ -62,11 +63,13 @@ namespace NoobsGameOfLife.Core
                 {
                     cell.Update(this);
 
+                    //TODO: Use Head elements to recreate new nutrients
+
                     cell.Sees(CellSees(cell));
 
                     foreach (var nutrient in nutrients.Where(n => !n.IsCollected))
                     {
-                        cell.TryCollect(nutrient);
+                        nutrient.IsCollected = cell.TryCollect(nutrient);
                     }
 
                     foreach (var otherCell in cells.Where(c => cell.Sex != c.Sex).ToArray())
@@ -85,7 +88,7 @@ namespace NoobsGameOfLife.Core
                 CellInfos = cells.Select(c => new CellInfo(c)).ToArray();
                 NutrientInfos = nutrients.Where(n => !n.IsCollected).Select(n => new NutrientInfo(n)).ToArray();
 
-                Thread.Sleep(16);
+                Thread.Sleep(SleepTime);
             }
         }
 
@@ -96,7 +99,7 @@ namespace NoobsGameOfLife.Core
                 .Concat(cells)
                 .Where(c => Collided(cell, c, 50) && c != cell)
                 .OrderBy(v => Math.Abs((int)(cell.Position - v.Position)));
-       
+
         public void Stop()
         {
             cancellationTokenSource.Cancel();
@@ -112,7 +115,7 @@ namespace NoobsGameOfLife.Core
 
         private void SetValue<T>(T value, ref T field, [CallerMemberName]string callername = "")
         {
-            if(field != null)
+            if (field != null)
             {
                 if (field.Equals(value))
                     return;

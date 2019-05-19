@@ -17,6 +17,9 @@ namespace NoobsGameOfLife
         private readonly Dictionary<string, ListViewItem> statItems;
         private readonly Dispatcher dispatcher;
 
+        private int lastCellLength;
+        private int lastNutrientLength;
+
         public MainForm()
         {
             dispatcher = Dispatcher.CurrentDispatcher;
@@ -25,6 +28,7 @@ namespace NoobsGameOfLife
             simpleBinding = new Dictionary<string, Action<string>>();
             statItems = new Dictionary<string, ListViewItem>();
             simulation = new Simulation(500, 500);
+            speedTrackBar.Value = simulation.SleepTime;
             renderControl.Simulation = simulation;
             Subscribe();
             simulation.Start();
@@ -40,11 +44,25 @@ namespace NoobsGameOfLife
         {
             var listItem = new ListViewItem();
             statItems.Add(nameof(Simulation.CellInfos), listItem);
-            simpleBinding.Add(nameof(Simulation.CellInfos), (p) => statItems[p].Text = "Cells: " + simulation.CellInfos.Length);
+            simpleBinding.Add(nameof(Simulation.CellInfos), (p) =>
+            {
+                if (lastCellLength == simulation.CellInfos.Length)
+                    return;
+
+                lastCellLength = simulation.CellInfos.Length;
+                statItems[p].Text = "Cells: " + simulation.CellInfos.Length;
+            });
 
             listItem = new ListViewItem();
             statItems.Add(nameof(Simulation.NutrientInfos), listItem);
-            simpleBinding.Add(nameof(Simulation.NutrientInfos), (p) => statItems[p].Text = "Nutrients: " + simulation.NutrientInfos.Length);
+            simpleBinding.Add(nameof(Simulation.NutrientInfos), (p) =>
+            {
+                if (lastNutrientLength == simulation.NutrientInfos.Length)
+                    return;
+
+                lastNutrientLength = simulation.NutrientInfos.Length;
+                statItems[p].Text = "Nutrients: " + simulation.NutrientInfos.Length;
+            });
 
             simulation.PropertyChanged += (s, e) => Task.Run(() => Dispatch(simpleBinding[e.PropertyName], e.PropertyName));
 
@@ -58,6 +76,12 @@ namespace NoobsGameOfLife
                 dispatcher.Invoke(action, param);
             else
                 action(param);
+        }
+
+        private void SpeedTrackBar_ValueChanged(object sender, EventArgs e)
+        {
+            if (sender is TrackBar tb)
+                simulation.SleepTime = tb.Value;
         }
     }
 }

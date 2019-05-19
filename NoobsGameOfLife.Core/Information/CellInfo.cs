@@ -3,7 +3,7 @@
     public struct CellInfo
     {
         public Location Position { get; private set; }
-        public int Energy { get; private set; }
+        public double Energy { get; private set; }
 
         public CellInfo(Cell cell)
         {

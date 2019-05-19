@@ -9,7 +9,7 @@ namespace NoobsGameOfLife.Core
     {
         public Location Position { get; set; }
 
-        public bool IsCollected { get; private set; }
+        public bool IsCollected { get; set; }
 
         public Dictionary<Element, byte> Elements { get; set; }
 
@@ -19,7 +19,7 @@ namespace NoobsGameOfLife.Core
             IsCollected = false;
             Elements = new Dictionary<Element, byte>();
 
-            foreach (var element in elements)  
+            foreach (var element in elements)
             {
                 if (Elements.ContainsKey(element.Element))
                     Elements[element.Element] = element.Count;
@@ -39,5 +39,6 @@ namespace NoobsGameOfLife.Core
             Position = position;
             IsCollected = false;
         }
+
     }
 }
