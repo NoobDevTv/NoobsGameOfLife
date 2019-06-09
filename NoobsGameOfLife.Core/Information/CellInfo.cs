@@ -1,4 +1,6 @@
-﻿namespace NoobsGameOfLife.Core.Information
+﻿using NoobsGameOfLife.Core.Biology;
+
+namespace NoobsGameOfLife.Core.Information
 {
     public struct CellInfo
     {

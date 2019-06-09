@@ -1,8 +1,9 @@
-﻿using System;
+﻿using NoobsGameOfLife.Core.Physics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NoobsGameOfLife.Core
+namespace NoobsGameOfLife.Core.Biology
 {
     public class DNA
     {

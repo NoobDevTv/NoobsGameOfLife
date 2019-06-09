@@ -1,4 +1,4 @@
-﻿namespace NoobsGameOfLife.Core
+﻿namespace NoobsGameOfLife.Core.Physics
 {
     public struct Element
     {

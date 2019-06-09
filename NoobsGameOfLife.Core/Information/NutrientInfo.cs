@@ -1,4 +1,7 @@
-﻿namespace NoobsGameOfLife.Core.Information
+﻿using NoobsGameOfLife.Core.Biology;
+using NoobsGameOfLife.Core.Physics;
+
+namespace NoobsGameOfLife.Core.Information
 {
     public struct NutrientInfo
     {

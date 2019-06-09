@@ -132,7 +132,7 @@
             this.speedTrackBar.Size = new System.Drawing.Size(151, 56);
             this.speedTrackBar.TabIndex = 0;
             this.speedTrackBar.Value = 16;
-            this.speedTrackBar.ValueChanged += new System.EventHandler(this.SpeedTrackBar_ValueChanged);
+            this.speedTrackBar.ValueChanged += new System.EventHandler(this.SpeedTrackBarValueChanged);
             // 
             // MainForm
             // 

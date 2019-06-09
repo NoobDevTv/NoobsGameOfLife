@@ -1,8 +1,10 @@
-﻿using System;
+﻿using NoobsGameOfLife.Core.Information;
+using NoobsGameOfLife.Core.Physics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NoobsGameOfLife.Core
+namespace NoobsGameOfLife.Core.Biology
 {
     public class Cell : IVisible
     {
@@ -96,10 +98,16 @@ namespace NoobsGameOfLife.Core
             if (Position.Y + y <= 0)
                 y = -Position.Y;
 
-            Energy -= Math.Abs(x) + Math.Abs(y);
+            var value = Math.Abs(x) + Math.Abs(y);
+            Energy -= value;
 
-            //TODO: used Energy to head element on current position
+            var heat = new HeatInformation
+            {
+                Position = Position,
+                Value = value
+            };
 
+            simulation.Add(heat);
             Position += new Location(x, y);
         }
 
@@ -153,9 +161,9 @@ namespace NoobsGameOfLife.Core
             => Position.X <= otherLocation.X && (Position.X + 10) >= otherLocation.X &&
                Position.Y <= otherLocation.Y && (Position.Y + 10) >= otherLocation.Y;
 
-        internal void Sees(IEnumerable<IVisible> visibles)
+        internal void Sees(IVisible[] visibles)
         {
-            if (currentTarget != null || visibles.Count() == 0)
+            if (currentTarget != null || visibles.Length == 0)
                 return;
 
             currentTarget = visibles

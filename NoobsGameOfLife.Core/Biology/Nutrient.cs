@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using NoobsGameOfLife.Core.Physics;
 
-namespace NoobsGameOfLife.Core
+namespace NoobsGameOfLife.Core.Biology
 {
     public class Nutrient : IVisible
     {

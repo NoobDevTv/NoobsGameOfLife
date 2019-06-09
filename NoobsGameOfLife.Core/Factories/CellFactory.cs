@@ -1,4 +1,6 @@
-﻿using System;
+﻿using NoobsGameOfLife.Core.Biology;
+using NoobsGameOfLife.Core.Physics;
+using System;
 using System.Collections.Generic;
 using System.Text;
 

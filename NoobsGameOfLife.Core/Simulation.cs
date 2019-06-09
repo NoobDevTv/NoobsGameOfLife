@@ -1,6 +1,9 @@
-﻿using NoobsGameOfLife.Core.Factories;
+﻿using NoobsGameOfLife.Core.Biology;
+using NoobsGameOfLife.Core.Factories;
+using NoobsGameOfLife.Core.Gods;
 using NoobsGameOfLife.Core.Information;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -11,46 +14,54 @@ using System.Threading.Tasks;
 
 namespace NoobsGameOfLife.Core
 {
-    public class Simulation : INotifyPropertyChanged
+    public sealed class Simulation : INotifyPropertyChanged
     {
-        public int Width { get; private set; }
-        public int Height { get; private set; }
+        public World World { get; }
+        public God God { get; }
+
+        public int Width => World.Width;
+        public int Height => World.Height;
         public int SleepTime { get; set; }
 
-        public CellInfo[] CellInfos { get => cellInfo; set => SetValue(value, ref cellInfo); }
-        public NutrientInfo[] NutrientInfos { get => nutrientInfos; set => SetValue(value, ref nutrientInfos); }
+        public IEnumerable<CellInfo> CellInfos { get => cellInfo; set => SetValue(value, ref cellInfo); }
+        public IEnumerable<NutrientInfo> NutrientInfos { get => nutrientInfos; set => SetValue(value, ref nutrientInfos); }
 
-        private readonly List<Cell> cells;
-        private readonly List<Nutrient> nutrients;
+        public ConcurrentQueue<HeatInformation> HeatInformations { get; }
+
         private readonly Dictionary<Type, Factory> factories;
         private CancellationTokenSource cancellationTokenSource;
 
-        private CellInfo[] cellInfo;
-        private NutrientInfo[] nutrientInfos;
+        private IEnumerable<CellInfo> cellInfo;
+        private IEnumerable<NutrientInfo> nutrientInfos;
+        private Nutrient nextNutrient;
+        private int neededEnergy;
+        private int collectedEnergy;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         public Simulation(int width, int height)
         {
-            Width = width;
-            Height = height;
-            SleepTime = 16;
-            cells = new List<Cell>();
-            nutrients = new List<Nutrient>();
+            World = new World(width, height);
+            God = new DefaultGod();
 
+            HeatInformations = new ConcurrentQueue<HeatInformation>();
+
+            SleepTime = 16;
+            
             factories = new Dictionary<Type, Factory>()
             {
                 [typeof(Cell)] = new CellFactory(width, height),
                 [typeof(Nutrient)] = new NutrientFactory(width, height)
             };
 
-            cells.AddRange(factories[typeof(Cell)].Generate<Cell>(30));
-            nutrients.AddRange(factories[typeof(Nutrient)].Generate<Nutrient>(2000));
+            World.Cells.AddRange(factories[typeof(Cell)].Generate<Cell>(30));
+            World.Nutrients.AddRange(factories[typeof(Nutrient)].Generate<Nutrient>(2000));
         }
 
         public void Start()
         {
             cancellationTokenSource = new CancellationTokenSource();
+            God.Start(cancellationTokenSource.Token);
             new Task(Update, cancellationTokenSource.Token, TaskCreationOptions.LongRunning)
             .Start(TaskScheduler.Default);
         }
@@ -59,51 +70,79 @@ namespace NoobsGameOfLife.Core
         {
             while (!cancellationTokenSource.IsCancellationRequested)
             {
-                foreach (var cell in cells.ToArray())
+                foreach (var cell in World.Cells)
                 {
                     cell.Update(this);
 
-                    //TODO: Use Head elements to recreate new nutrients
+             
 
                     cell.Sees(CellSees(cell));
 
-                    foreach (var nutrient in nutrients.Where(n => !n.IsCollected))
+                    foreach (var nutrient in World.Nutrients.Where(n => !n.IsCollected))
                     {
                         nutrient.IsCollected = cell.TryCollect(nutrient);
                     }
 
-                    foreach (var otherCell in cells.Where(c => cell.Sex != c.Sex).ToArray())
+                    foreach (var otherCell in World.Cells.Where(c => cell.Sex != c.Sex))
                     {
                         if (cell.TryBreeding(otherCell, out var child))
-                            cells.Add(child);
+                            World.Cells.Add(child);
                     }
                 }
-
-                foreach (var cell in cells.Where(c => !c.IsAlive).ToArray())
+                if (nextNutrient == null)
                 {
-                    //nutrients.Add(new Nutrient(cell.Position));
-                    cells.Remove(cell);
+                    nextNutrient = factories[typeof(Nutrient)].Generate<Nutrient>(1).First();
+                    neededEnergy = nextNutrient.Elements.Sum(e => e.Value * e.Key.Energy);
                 }
 
-                CellInfos = cells.Select(c => new CellInfo(c)).ToArray();
-                NutrientInfos = nutrients.Where(n => !n.IsCollected).Select(n => new NutrientInfo(n)).ToArray();
+                while (HeatInformations.Count > 0 && collectedEnergy < neededEnergy)
+                {
+                    if (HeatInformations.TryDequeue(out HeatInformation heat))
+                        collectedEnergy += heat.Value;
+                    else
+                        break;
+                }
+
+                if (collectedEnergy >= neededEnergy)
+                {
+                    World.Nutrients.Add(nextNutrient);
+                    nextNutrient = null;
+                    collectedEnergy -= neededEnergy;
+                }
+
+                foreach (var cell in World.Cells.Where(c => !c.IsAlive))
+                {
+                    //nutrients.Add(new Nutrient(cell.Position));
+                    World.Cells.Remove(cell);
+                }
+
+                if (World.Cells.Count > 0)
+                    CellInfos = World.Cells.Select(c => new CellInfo(c));
+
+                if (World.Cells.Count > 0)
+                    NutrientInfos = World.Nutrients.Where(n => !n.IsCollected).Select(n => new NutrientInfo(n));
 
                 Thread.Sleep(SleepTime);
             }
         }
 
-        private IEnumerable<IVisible> CellSees(Cell cell)
-            => nutrients
-                .Where(n => !n.IsCollected)
-                .Select(n => (IVisible)n)
-                .Concat(cells)
-                .Where(c => Collided(cell, c, 50) && c != cell)
-                .OrderBy(v => Math.Abs((int)(cell.Position - v.Position)));
+        internal void Add(HeatInformation heat)
+        {
+            HeatInformations.Enqueue(heat);
+        }
 
         public void Stop()
         {
             cancellationTokenSource.Cancel();
         }
+
+        private IVisible[] CellSees(Cell cell)
+            => World.Nutrients
+                .Where(n => !n.IsCollected)
+                .Select(n => (IVisible)n)
+                .Concat(World.Cells)
+                .Where(c => Collided(cell, c, 50) && c != cell)
+                .OrderBy(v => Math.Abs((int)(cell.Position - v.Position))).ToArray();
 
         private bool Collided(IVisible seeker, IVisible sighted, int seekerRange)
         {
@@ -115,11 +154,8 @@ namespace NoobsGameOfLife.Core
 
         private void SetValue<T>(T value, ref T field, [CallerMemberName]string callername = "")
         {
-            if (field != null)
-            {
-                if (field.Equals(value))
+            if (field != null && field.Equals(value))
                     return;
-            }
 
             field = value;
 
