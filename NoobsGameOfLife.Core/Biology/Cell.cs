@@ -3,6 +3,7 @@ using NoobsGameOfLife.Core.Physics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace NoobsGameOfLife.Core.Biology
 {
@@ -26,6 +27,7 @@ namespace NoobsGameOfLife.Core.Biology
         private Nutrient digesting;
         private readonly DNA dna;
         private readonly Random random;
+        private readonly SemaphoreSlim semaphore;
 
         private readonly DNA gamete;
 
@@ -45,6 +47,7 @@ namespace NoobsGameOfLife.Core.Biology
             gamete = dna.Copy();
             energy = 1000;
             IsAlive = true;
+            semaphore = new SemaphoreSlim(1, 1);
         }
 
         public void Update(Simulation simulation)
@@ -113,14 +116,19 @@ namespace NoobsGameOfLife.Core.Biology
 
         internal bool TryBreeding(Cell otherCell, out Cell child)
         {
+            semaphore.Wait();
             child = null;
 
             if (!Collide(otherCell.Position))
+            {
+                semaphore.Release();
                 return false;
+            }
 
             if (timeToNextSexyTimeWithOtherCellUlala > 0)
             {
                 currentTarget = null;
+                semaphore.Release();
                 return false;
             }
 
@@ -136,9 +144,11 @@ namespace NoobsGameOfLife.Core.Biology
             {
                 timeToNextSexyTimeWithOtherCellUlala = 300;
                 otherCell.timeToNextSexyTimeWithOtherCellUlala = 300;
+                semaphore.Release();
                 return false;
             }
 
+            semaphore.Release();
             return true;
         }
 
@@ -157,13 +167,13 @@ namespace NoobsGameOfLife.Core.Biology
             return true;
         }
 
-        private bool Collide(Location otherLocation)
+        internal bool Collide(Location otherLocation)
             => Position.X <= otherLocation.X && (Position.X + 10) >= otherLocation.X &&
                Position.Y <= otherLocation.Y && (Position.Y + 10) >= otherLocation.Y;
 
-        internal void Sees(IVisible[] visibles)
+        internal void Sees(IEnumerable<IVisible> visibles)
         {
-            if (currentTarget != null || visibles.Length == 0)
+            if (currentTarget != null)
                 return;
 
             currentTarget = visibles
@@ -173,7 +183,8 @@ namespace NoobsGameOfLife.Core.Biology
                 .FirstOrDefault();
 
             if (currentTarget == null && timeToNextSexyTimeWithOtherCellUlala == 0)
-                currentTarget = visibles.Where(x => ((Cell)x).Sex != Sex).OrderByDescending(x => ((Cell)x).Energy / (float)(int)(x.Position - Position)).FirstOrDefault(); ;
+                currentTarget = visibles.OfType<Cell>().Where(x => x.Sex != Sex)
+                    .OrderByDescending(x => x.Energy / (float)(int)(x.Position - Position)).FirstOrDefault();
         }
 
         private int GetFertility()

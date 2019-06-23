@@ -22,9 +22,7 @@ namespace NoobsGameOfLife.Core
         public static explicit operator int(Location loc)
             => Math.Abs(loc.X)+ Math.Abs(loc.Y);
 
-        public override string ToString()
-        {
-            return $"X:{X} | Y:{Y}";
-        }
+        public override string ToString() 
+            => $"X:{X} | Y:{Y}";
     }
 }

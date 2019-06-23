@@ -37,7 +37,8 @@ namespace NoobsGameOfLife.Core.Biology
                 Sex = Sex
             };
 
-        public override string ToString() => $"{Sex} | {MaxEnergy} | {Saturated}";
+        public override string ToString() 
+            => $"{Sex} | {MaxEnergy} | {Saturated}";
 
         public static DNA operator +(DNA male, DNA female)
         {

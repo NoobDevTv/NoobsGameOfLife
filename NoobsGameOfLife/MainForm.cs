@@ -28,7 +28,7 @@ namespace NoobsGameOfLife
             InitializeComponent();
             simpleBinding = new Dictionary<string, Action<string>>();
             statItems = new Dictionary<string, ListViewItem>();
-            simulation = new Simulation(500, 500);
+            simulation = new Simulation(512, 512);
             speedTrackBar.Value = simulation.SleepTime;
             renderControl.Simulation = simulation;
             Subscribe();
