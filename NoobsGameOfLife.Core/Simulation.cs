@@ -42,11 +42,13 @@ namespace NoobsGameOfLife.Core
             God = new DefaultGod();
 
             SleepTime = 16;
+            var genomFactory = new GenomFactory(width, height);
 
             factories = new Dictionary<Type, Factory>()
             {
-                [typeof(Cell)] = new CellFactory(width, height),
-                [typeof(Nutrient)] = new NutrientFactory(width, height)
+                [typeof(Cell)] = new CellFactory(genomFactory, width, height),
+                [typeof(Nutrient)] = new NutrientFactory(width, height),
+                [typeof(Genom)] = genomFactory
             };
 
             int chunkWidth = 8;

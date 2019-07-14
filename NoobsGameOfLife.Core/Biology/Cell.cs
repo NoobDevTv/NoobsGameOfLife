@@ -12,7 +12,7 @@ namespace NoobsGameOfLife.Core.Biology
         public Location Position { get; set; }
         public bool IsAlive { get; private set; }
 
-        public DNA.Gender Sex => dna.Sex;
+        public Genom.Gender Sex => dna.Sex;
 
         public double Energy
         {
@@ -25,21 +25,21 @@ namespace NoobsGameOfLife.Core.Biology
 
         private double energy;
         private Nutrient digesting;
-        private readonly DNA dna;
+        private readonly Genom dna;
         private readonly Random random;
         private readonly SemaphoreSlim semaphore;
 
-        private readonly DNA gamete;
+        private readonly Genom gamete;
 
         private IVisible currentTarget;
 
         private int timeToNextSexyTimeWithOtherCellUlala = 40;
 
-        public Cell(DNA dna) : this(dna, new Location(100, 100))
+        public Cell(Genom dna) : this(dna, new Location(100, 100))
         {
         }
 
-        public Cell(DNA dna, Location position)
+        public Cell(Genom dna, Location position)
         {
             random = new Random(dna.Seed);
             Position = position;
@@ -223,6 +223,6 @@ namespace NoobsGameOfLife.Core.Biology
 
 
         public static Cell operator +(Cell male, Cell female)
-            => new Cell(male.gamete + female.gamete, female.Position);
+            => new Cell(female.gamete + male.gamete, female.Position);
     }
 }
