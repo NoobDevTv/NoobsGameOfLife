@@ -20,6 +20,7 @@ namespace NoobsGameOfLife
 
         private int lastCellLength;
         private int lastNutrientLength;
+        private Task refreshTask;
 
         public MainForm()
         {
@@ -33,6 +34,8 @@ namespace NoobsGameOfLife
             renderControl.Simulation = simulation;
             Subscribe();
             simulation.Start();
+            refreshTask = new Task(async () => await ChangeEnergyLabel(), TaskCreationOptions.LongRunning);
+            refreshTask.Start();
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -60,13 +63,16 @@ namespace NoobsGameOfLife
             simpleBinding.Add(nameof(Simulation.NutrientInfos), (p) =>
             {
                 var count = simulation.NutrientInfos.Count();
-
                 if (lastNutrientLength == count)
                     return;
 
                 lastNutrientLength = count;
                 statItems[p].Text = "Nutrients: " + count;
             });
+
+            listItem = new ListViewItem();
+            statItems.Add("Energy", listItem);
+ 
 
             simulation.PropertyChanged += (s, e) => Task.Run(() => Dispatch(simpleBinding[e.PropertyName], e.PropertyName));
 
@@ -82,10 +88,37 @@ namespace NoobsGameOfLife
                 action(param);
         }
 
+        private async Task DispatchAsync(Action action)
+        {
+            if (DispatchRequired)
+                await dispatcher.InvokeAsync(action);
+            else
+                action();
+        }
+
         private void SpeedTrackBarValueChanged(object sender, EventArgs e)
         {
             if (sender is TrackBar tb)
                 simulation.SleepTime = tb.Value;
+        }
+
+        private async Task ChangeEnergyLabel()
+        {
+            while (true)
+            {
+
+                var result = simulation.CellInfos?.Sum(x => x.Energy)
+                    + simulation.NutrientInfos?.Sum(x => x.Carbon * 10 + x.Hydrogen * 10 + x.Oxygen * 10);
+
+                await DispatchAsync(() =>
+                {
+                    statItems["Energy"].Text =
+                    $"Energy: {result}";
+                });
+
+                await Task.Delay(1000);
+            }
+
         }
     }
 }

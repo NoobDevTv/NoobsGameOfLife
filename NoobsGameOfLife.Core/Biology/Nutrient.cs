@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using NoobsGameOfLife.Core.Physics;
+using NoobsGameOfLife.Core.Extensions;
 
 namespace NoobsGameOfLife.Core.Biology
 {
@@ -41,5 +42,14 @@ namespace NoobsGameOfLife.Core.Biology
             IsCollected = false;
         }
 
+        public override string ToString()
+            => $"{Position} | {IsCollected} {GetElementString()}";
+
+        private string GetElementString()
+        {
+            var retString = "";
+            Elements.Keys.ForEach(k => retString += $" | {k}");
+            return retString;
+        }
     }
 }

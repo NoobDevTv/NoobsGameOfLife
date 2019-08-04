@@ -107,7 +107,7 @@ namespace NoobsGameOfLife.Core
                 });
 
                 Parallel.ForEach(chunks, (c) => c.Update(World));
-
+                var c = World.Nutrients.Where(n => !n.IsCollected).Count();
                 foreach (var cell in World.Cells.Where(c => !c.IsAlive))
                 {
                     //nutrients.Add(new Nutrient(cell.Position));

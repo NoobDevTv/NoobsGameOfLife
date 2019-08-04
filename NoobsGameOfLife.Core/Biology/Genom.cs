@@ -27,15 +27,13 @@ namespace NoobsGameOfLife.Core.Biology
                     return SequenceA[index];
             }
         }
-
-
+        
         public Chromosome[] SequenceA { get; }
         public Chromosome[] SequenceB { get; }
         public Gender Sex { get; }
 
         public int Seed { get; }
-
-
+        
         public Genom(Chromosome[] sequenceA, Chromosome[] sequenceB)
         {
             SequenceA = sequenceA;
@@ -45,6 +43,8 @@ namespace NoobsGameOfLife.Core.Biology
             Seed = GetSeed();
         }
 
+        public IEnumerable<T> Get<T>() where T : Chromosome 
+            => SequenceA.Where(c => c is T).Concat(SequenceB.Where(c => c is T)).Select(c => c as T);
 
         public Genom Copy()
             => new Genom(SequenceA.ToArray(), SequenceB.ToArray());
@@ -106,8 +106,6 @@ namespace NoobsGameOfLife.Core.Biology
 
             return new Genom(female.Split(), male.Split());
         }
-
-
 
         public enum Gender
         {

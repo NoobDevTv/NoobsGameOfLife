@@ -1,4 +1,5 @@
-﻿using NoobsGameOfLife.Core.Information;
+﻿using NoobsGameOfLife.Core.Extensions;
+using NoobsGameOfLife.Core.Information;
 using NoobsGameOfLife.Core.Physics;
 using System;
 using System.Collections.Generic;
@@ -28,7 +29,9 @@ namespace NoobsGameOfLife.Core.Biology
         private readonly Genom dna;
         private readonly Random random;
         private readonly SemaphoreSlim semaphore;
-
+        private readonly ushort saturaded;
+        private readonly double maxEnergy;
+        private readonly Dictionary<Element, float> foodDigestibility;
         private readonly Genom gamete;
 
         private IVisible currentTarget;
@@ -48,6 +51,11 @@ namespace NoobsGameOfLife.Core.Biology
             energy = 1000;
             IsAlive = true;
             semaphore = new SemaphoreSlim(1, 1);
+
+            var dChromosome = dna.Get<DChromosome>();
+            saturaded = (ushort)dChromosome.Average(c => c.Saturated);
+            maxEnergy = dChromosome.Average(c => c.MaxEnergy);
+            foodDigestibility = CombineDigestibility(dChromosome);
         }
 
         public void Update(Simulation simulation)
@@ -66,7 +74,7 @@ namespace NoobsGameOfLife.Core.Biology
 
             if (currentTarget is Nutrient nutrient)
             {
-                if (nutrient.IsCollected || dna.Saturated < Energy)
+                if (nutrient.IsCollected || saturaded < Energy)
                     currentTarget = null;
             }
             else if (currentTarget is Cell cell)
@@ -114,6 +122,9 @@ namespace NoobsGameOfLife.Core.Biology
             Position += new Location(x, y);
         }
 
+        public override string ToString() 
+            => $"{Sex} | {IsAlive} | {Position}";
+
         internal bool TryBreeding(Cell otherCell, out Cell child)
         {
             semaphore.Wait();
@@ -125,7 +136,9 @@ namespace NoobsGameOfLife.Core.Biology
                 return false;
             }
 
-            if (timeToNextSexyTimeWithOtherCellUlala > 0)
+            if (timeToNextSexyTimeWithOtherCellUlala > 0 ||
+                otherCell.Energy - otherCell.Energy / 2 <= 0 ||
+                Energy - Energy / 2 <= 0)
             {
                 currentTarget = null;
                 semaphore.Release();
@@ -139,6 +152,9 @@ namespace NoobsGameOfLife.Core.Biology
                 otherCell.timeToNextSexyTimeWithOtherCellUlala = 600;
                 currentTarget = null;
                 otherCell.currentTarget = null;
+                child.Energy = Energy / 2 + otherCell.Energy / 2;
+                otherCell.Energy /= 2;
+                Energy /= 2;
             }
             else
             {
@@ -157,7 +173,7 @@ namespace NoobsGameOfLife.Core.Biology
             if (nutrient.IsCollected)
                 return false;
 
-            if (energy >= dna.Saturated && digesting != null)
+            if (energy >= saturaded && digesting != null)
                 return false;
 
             if (!Collide(nutrient.Position))
@@ -178,7 +194,7 @@ namespace NoobsGameOfLife.Core.Biology
 
             currentTarget = visibles
                 .OfType<Nutrient>()
-                .Where(n => dna.FoodDigestibility.Any(k => k.Value >= 0 && n.Elements.ContainsKey(k.Key)))
+                .Where(n => foodDigestibility.Any(k => k.Value >= 0 && n.Elements.ContainsKey(k.Key)))
                 .OrderByDescending(x => (float)(int)(x.Position - Position))
                 .FirstOrDefault();
 
@@ -187,35 +203,52 @@ namespace NoobsGameOfLife.Core.Biology
                     .OrderByDescending(x => x.Energy / (float)(int)(x.Position - Position)).FirstOrDefault();
         }
 
+        private Dictionary<Element, float> CombineDigestibility(IEnumerable<DChromosome> dChromosome)
+        {
+            var digestibility = new Dictionary<Element, float>();
+
+            foreach (var chromosome in dChromosome)
+            {
+                foreach (var element in chromosome.FoodDigestibility)
+                {
+                    if (digestibility.TryGetValue(element.Key, out float value))
+                        digestibility[element.Key] = (value + element.Value) / 2;
+                    else
+                        digestibility.Add(element.Key, element.Value);
+                }
+            }
+
+            return digestibility;
+        }
+
         private int GetFertility()
             => random.Next(0, 10);
 
         private bool Digest()
         {
-            if (digesting != null && energy < dna.MaxEnergy)
+            if (digesting != null && energy < maxEnergy)
             {
-                foreach (KeyValuePair<Element, float> digestibilityElement in dna.FoodDigestibility.OrderBy(x => x.Value))
+                foreach (KeyValuePair<Element, float> digestibilityElement in foodDigestibility.OrderBy(x => x.Value))
                 {
                     if (digesting.Elements.TryGetValue(digestibilityElement.Key, out var amount))
                     {
                         byte count;
                         for (count = 0; count < amount; count++)
                         {
-                            energy += digestibilityElement.Key.Energy * digestibilityElement.Value;
-                            gamete.FoodDigestibility[digestibilityElement.Key] += 0.001f;
+                            energy += digestibilityElement.Key.Energy;
 
-                            if (energy >= dna.MaxEnergy)
+                            if (energy >= maxEnergy)
                                 break;
                         }
 
                         digesting.Elements[digestibilityElement.Key] -= count;
                     }
 
-                    if (energy >= dna.MaxEnergy)
+                    if (energy >= maxEnergy)
                         return true;
                 }
 
-                if (digesting.Elements.Where(x => dna.FoodDigestibility.ContainsKey(x.Key)).All(x => x.Value <= 0))
+                if (digesting.Elements.Where(x => foodDigestibility.ContainsKey(x.Key)).All(x => x.Value <= 0))
                     return true;
             }
             return false;
