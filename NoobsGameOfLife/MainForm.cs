@@ -1,6 +1,9 @@
 ﻿using NoobsGameOfLife.Core;
+using NoobsGameOfLife.Core.Information;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,23 +21,34 @@ namespace NoobsGameOfLife
         private readonly Dictionary<string, ListViewItem> statItems;
         private readonly Dispatcher dispatcher;
 
-        private int lastCellLength;
-        private int lastNutrientLength;
-        private Task refreshTask;
+        private readonly Task refreshTask;
+        private readonly BindingList<CellInfo> dataGridItems;
 
         public MainForm()
         {
             dispatcher = Dispatcher.CurrentDispatcher;
 
             InitializeComponent();
+
+            dataGridItems = new BindingList<CellInfo>();
+
+            cellDataGrid.AutoGenerateColumns = true;
+            cellDataGrid.ReadOnly = true;
+            cellDataGrid.AllowUserToAddRows = false;
+            cellDataGrid.DataSource = dataGridItems;
+            //dataGridItems.Add(new DataGridItem() { Name = "Test" });
+
             simpleBinding = new Dictionary<string, Action<string>>();
             statItems = new Dictionary<string, ListViewItem>();
             simulation = new Simulation(512, 512);
             speedTrackBar.Value = simulation.SleepTime;
             renderControl.Simulation = simulation;
+
             Subscribe();
+            renderControl.SelectionChanged += RenderControlSelectionChanged;
+
             simulation.Start();
-            refreshTask = new Task(async () => await ChangeEnergyLabel(), TaskCreationOptions.LongRunning);
+            refreshTask = new Task(async () => await UpdateUi(), TaskCreationOptions.LongRunning);
             refreshTask.Start();
         }
 
@@ -48,36 +62,33 @@ namespace NoobsGameOfLife
         {
             var listItem = new ListViewItem();
             statItems.Add(nameof(Simulation.CellInfos), listItem);
-            simpleBinding.Add(nameof(Simulation.CellInfos), (p) =>
-            {
-                var count = simulation.CellInfos.Count();
-                if (lastCellLength == count)
-                    return;
-
-                lastCellLength = count;
-                statItems[p].Text = "Cells: " + count;
-            });
-
             listItem = new ListViewItem();
             statItems.Add(nameof(Simulation.NutrientInfos), listItem);
-            simpleBinding.Add(nameof(Simulation.NutrientInfos), (p) =>
-            {
-                var count = simulation.NutrientInfos.Count();
-                if (lastNutrientLength == count)
-                    return;
-
-                lastNutrientLength = count;
-                statItems[p].Text = "Nutrients: " + count;
-            });
 
             listItem = new ListViewItem();
             statItems.Add("Energy", listItem);
- 
 
-            simulation.PropertyChanged += (s, e) => Task.Run(() => Dispatch(simpleBinding[e.PropertyName], e.PropertyName));
+
+            simulation.PropertyChanged += (s, e) => Task.Run(() =>
+            {
+                if (simpleBinding.TryGetValue(e.PropertyName, out var binding))
+                    Dispatch(binding, e.PropertyName);
+            });
 
             foreach (ListViewItem item in statItems.Values)
                 statsView.Items.Add(item);
+        }
+
+        private void RenderControlSelectionChanged(object sender, IEnumerable<CellInfo> cellInfos)
+        {
+            dataGridItems.Clear();
+
+            if (cellInfos == null)
+                return;
+
+            foreach (var cell in cellInfos)
+                dataGridItems.Add(cell);
+
         }
 
         private void Dispatch<T>(Action<T> action, T param)
@@ -102,23 +113,44 @@ namespace NoobsGameOfLife
                 simulation.SleepTime = tb.Value;
         }
 
-        private async Task ChangeEnergyLabel()
+        private async Task UpdateUi()
         {
             while (true)
             {
-
-                var result = simulation.CellInfos?.Sum(x => x.Energy)
+                var cellInfos = simulation.CellInfos?.Count();
+                var nutrientInfos = simulation.NutrientInfos?.Count();
+                var energyResult = simulation.CellInfos?.Sum(x => x.Energy)
                     + simulation.NutrientInfos?.Sum(x => x.Carbon * 10 + x.Hydrogen * 10 + x.Oxygen * 10);
+
+                IEnumerable<CellInfo> cells = null; 
+                
+                if (renderControl.SelectedCells != null)
+                    cells = simulation.CellInfos?.Where(c => renderControl.SelectedCells.Contains(c));
 
                 await DispatchAsync(() =>
                 {
-                    statItems["Energy"].Text =
-                    $"Energy: {result}";
+                    statItems[nameof(Simulation.NutrientInfos)].Text = $"Nutrients: {nutrientInfos}";
+                    statItems[nameof(Simulation.CellInfos)].Text = $"Cells: {cellInfos}";
+                    statItems["Energy"].Text = $"Energy: {energyResult}";
+                    RenderControlSelectionChanged(this, cells);
                 });
 
-                await Task.Delay(1000);
+                await Task.Delay(250);
             }
 
+        }
+
+
+        private class DataGridItem
+        {
+            public double Energy { get; }
+            public Location Position { get; }
+
+            public DataGridItem(CellInfo cellInfo)
+            {
+                Energy = cellInfo.Energy;
+                Position = cellInfo.Position;
+            }
         }
     }
 }

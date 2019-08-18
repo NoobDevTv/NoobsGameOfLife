@@ -10,6 +10,11 @@ namespace NoobsGameOfLife.Core.Biology
 {
     public class Cell : IVisible
     {
+        private static ulong NextId => nextId++;
+        private static ulong nextId = 0;
+
+        public ulong Id { get;  }
+
         public Location Position { get; set; }
         public bool IsAlive { get; private set; }
 
@@ -44,6 +49,7 @@ namespace NoobsGameOfLife.Core.Biology
 
         public Cell(Genom dna, Location position)
         {
+            Id = NextId;
             random = new Random(dna.Seed);
             Position = position;
             this.dna = dna;

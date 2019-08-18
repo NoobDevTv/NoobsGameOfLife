@@ -73,8 +73,17 @@ namespace NoobsGameOfLife.Core
         {
             cancellationTokenSource = new CancellationTokenSource();
             God.Start(cancellationTokenSource.Token);
-            new Task(async () => await Update(cancellationTokenSource.Token),
-                cancellationTokenSource.Token, TaskCreationOptions.LongRunning)
+            new Task(async () =>
+            {
+                try
+                {
+                    await Update(cancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    //This is ok because program is ending
+                }
+            }, cancellationTokenSource.Token, TaskCreationOptions.LongRunning)
             .Start(TaskScheduler.Default);
         }
 

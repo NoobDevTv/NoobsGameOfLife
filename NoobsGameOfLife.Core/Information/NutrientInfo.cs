@@ -5,10 +5,10 @@ namespace NoobsGameOfLife.Core.Information
 {
     public struct NutrientInfo
     {
-        public Location Position { get; set; }
-        public byte Carbon { get; set; }
-        public byte Oxygen { get; set; }
-        public byte Hydrogen { get; set; }
+        public Location Position { get; }
+        public byte Carbon { get;  }
+        public byte Oxygen { get;  }
+        public byte Hydrogen { get;  }
 
         public NutrientInfo(Nutrient nutrient)
         {
