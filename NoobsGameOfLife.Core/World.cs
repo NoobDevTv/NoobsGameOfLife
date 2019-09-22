@@ -9,8 +9,7 @@ namespace NoobsGameOfLife.Core
     {
         public int Height { get; }
         public int Width { get; }
-
-
+        
         public ConcurrentCollection<Cell> Cells { get; }
         public ConcurrentCollection<Nutrient> Nutrients { get; }
 

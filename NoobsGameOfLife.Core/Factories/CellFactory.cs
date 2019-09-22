@@ -14,8 +14,7 @@ namespace NoobsGameOfLife.Core.Factories
         {
             GenomFactory = genomFactory;
         }
-
-
+        
         public override Cell GetNext()
             => new Cell(GenomFactory.GetNext());
     }

@@ -90,22 +90,8 @@ namespace NoobsGameOfLife.Core.Biology
             return aCell.Seed + bCell.Seed;
         }
 
-        public static Genom operator +(Genom female, Genom male)
-        {
-            //var foodDigestibilities = new Dictionary<Element, float>();
-
-            //foreach (var element in male.FoodDigestibility)
-            //    foodDigestibilities.Add(element.Key, (element.Value + female.FoodDigestibility[element.Key]) / 2);
-
-            //var foodDigestibility = foodDigestibilities.OrderBy(x => x.Value);
-
-            //var entry = foodDigestibility.First();
-            //foodDigestibilities[entry.Key] -= 0.5f;
-            //entry = foodDigestibility.Last();
-            //foodDigestibilities[entry.Key] += 0.5f;
-
-            return new Genom(female.Split(), male.Split());
-        }
+        public static Genom operator +(Genom female, Genom male) 
+            => new Genom(female.Split(), male.Split());
 
         public enum Gender
         {

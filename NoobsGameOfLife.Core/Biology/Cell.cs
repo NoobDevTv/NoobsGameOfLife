@@ -260,7 +260,6 @@ namespace NoobsGameOfLife.Core.Biology
             return false;
         }
 
-
         public static Cell operator +(Cell male, Cell female)
             => new Cell(female.gamete + male.gamete, female.Position);
     }

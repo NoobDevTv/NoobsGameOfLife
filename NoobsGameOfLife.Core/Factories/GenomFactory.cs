@@ -41,7 +41,5 @@ namespace NoobsGameOfLife.Core.Factories
         public override Genom GetNext() 
             => new Genom(Female, Male);
 
-
-
     }
 }

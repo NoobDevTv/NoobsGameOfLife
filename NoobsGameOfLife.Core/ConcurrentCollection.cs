@@ -105,8 +105,6 @@ namespace NoobsGameOfLife.Core
             }
 
             public void Dispose() { }
-        }
-
-        
+        }        
     }
 }

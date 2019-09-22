@@ -15,6 +15,9 @@ namespace NoobsGameOfLife
 {
     public partial class RenderControl : UserControl
     {
+        private const int CELLWIDTH = 10;
+        private const int CELLHEIGHT = 10;
+
         public Simulation Simulation { get; set; }
         public Rectangle SelectionRectangle { get; private set; }
         public IReadOnlyList<CellInfo> SelectedCells { get; private set; }
@@ -30,7 +33,7 @@ namespace NoobsGameOfLife
 
         public RenderControl()
         {
-            
+
             InitializeComponent();
             timer = new Timer();
             timer.Tick += (s, e) => Invalidate();
@@ -55,7 +58,6 @@ namespace NoobsGameOfLife
                     e.Graphics.FillRectangle(brush, new Rectangle(nutrienInfo.Position.X, nutrienInfo.Position.Y, 5, 5));
             }
 
-
             foreach (var cellInfo in Simulation.CellInfos)
             {
                 if (max < cellInfo.Energy)
@@ -69,16 +71,18 @@ namespace NoobsGameOfLife
                     redValue = 255;
 
                 using (var brush = new SolidBrush(Color.FromArgb((byte)redValue, 0, 0)))
-                    e.Graphics.FillRectangle(brush, new Rectangle(cellInfo.Position.X, cellInfo.Position.Y, 10, 10));
+                    e.Graphics.FillRectangle(brush, new Rectangle(cellInfo.Position.X, cellInfo.Position.Y, CELLWIDTH, CELLHEIGHT));
             }
 
-            if (SelectedCells != null)
+            var cells = new List<CellInfo>();
+
+            if (mouseDown)
+                cells.AddRange(Simulation.CellInfos.Where(c => SelectionRectangle.Contains(c.Position.X, c.Position.Y)));
+
+            foreach (var selectedCell in cells.Concat(Simulation.CellInfos?.Where(c => SelectedCells?.Contains(c) ?? false)))
             {
-                foreach (var selectedCell in Simulation.CellInfos?.Where(c => SelectedCells.Contains(c)))
-                {
-                    using (var pen = new Pen(Color.Yellow, 2))
-                        e.Graphics.DrawRectangle(pen, new Rectangle(selectedCell.Position.X, selectedCell.Position.Y, 10, 10));
-                }
+                using (var pen = new Pen(Color.Yellow, 2))
+                    e.Graphics.DrawRectangle(pen, new Rectangle(selectedCell.Position.X, selectedCell.Position.Y, 10, 10));
             }
 
             if (mouseDown)
@@ -91,14 +95,31 @@ namespace NoobsGameOfLife
         {
             using var pen = new Pen(Color.White, 3);
 
-            int relativeWidth = Math.Abs(mouseStartLocation.X - mouseLocation.X);
-            int relativeHeight = Math.Abs(mouseStartLocation.Y - mouseLocation.Y);
-            int startX = Math.Min(mouseLocation.X, mouseStartLocation.X);
-            int startY = Math.Min(mouseLocation.Y, mouseStartLocation.Y);
+            int relativeWidth;
+            int relativeHeight;
+            int startX;
+            int startY;
+
+            if (mouseDown && mouseStartLocation == mouseLocation)
+            {
+                relativeWidth = CELLWIDTH;
+                relativeHeight = CELLHEIGHT;
+                startX = Math.Max(0, mouseLocation.X - CELLWIDTH / 2);
+                startY = Math.Max(0, mouseLocation.Y - CELLHEIGHT / 2);
+            }
+            else
+            {
+                relativeWidth = Math.Abs(mouseStartLocation.X - mouseLocation.X);
+                relativeHeight = Math.Abs(mouseStartLocation.Y - mouseLocation.Y);
+                startX = Math.Min(mouseLocation.X, mouseStartLocation.X);
+                startY = Math.Min(mouseLocation.Y, mouseStartLocation.Y);
+            }
+
 
             SelectionRectangle = new Rectangle(new Point(startX, startY), new Size(relativeWidth, relativeHeight));
 
             e.Graphics.DrawRectangle(pen, SelectionRectangle);
+
         }
 
         protected override void OnMouseUp(MouseEventArgs e)
@@ -117,6 +138,8 @@ namespace NoobsGameOfLife
         {
             mouseDown = true;
             mouseStartLocation = e.Location;
+            mouseLocation = e.Location;
+            SelectedCells = new List<CellInfo>();
 
             base.OnMouseDown(e);
         }
